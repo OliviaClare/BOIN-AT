@@ -12,6 +12,8 @@
 #' @param target the target DLT rate
 #' @param p.true a vector containing the true toxicity probabilities of the
 #'              investigational dose levels.
+#' @param ae.true a vector containing the true grade <=2 AE probabilities of the
+#'              investigational dose levels.
 #' @param ncohort the total number of cohorts
 #' @param cohortsize the cohort size
 #' @param n.earlystop the early stopping parameter. If the number of patients
@@ -135,7 +137,7 @@
 #' summary(oc)          # summarize design operating characteristics
 #' plot(oc)  # plot flowchart of the BOIN design and design operating characteristics
 #' @export
-get.oc <- function (target, p.true, ncohort, cohortsize, n.earlystop = 100,
+get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlystop = 100,
                     startdose = 1, titration = FALSE, 
                     p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL, 
                     cutoff.eli = 0.95, extrasafe = FALSE, offset = 0.05,boundMTD=FALSE,
@@ -148,6 +150,10 @@ get.oc <- function (target, p.true, ncohort, cohortsize, n.earlystop = 100,
   if (target > 0.6) {
     stop("the target is too high!")
     
+  }
+  
+  if(is.null(ae.true)){
+    ae.true = rep(0, length(p.true))
   }
   
   
@@ -242,17 +248,22 @@ get.oc <- function (target, p.true, ncohort, cohortsize, n.earlystop = 100,
     d = startdose
     elimi = rep(0, ndose)
     ft=TRUE #flag used to determine whether or not to add cohortsize-1 patients to a dose for the first time when titration is triggered.
-    if (titration) {
+    if (titration) { # number of titration dose is all doses
       z <- (runif(ndose) < p.true)
-      if (sum(z) == 0) {
-        d = ndose
-        n[1:ndose] = 1
+      z.ae <- (runif(ndose) < ae.true) # simulate grade 2 AE events for each dose level
+      if (sum(z) == 0 && sum(z.ae)==0) { # no events, proceed
+          d = ndose
+          n[1:ndose] = 1
+      }else if(sum(z)==0){
+        d=which(z.ae==1)[1]
+      }else if(sum(z.ae)==0){
+        d=which(z==1)[1]
+      }else{
+          d = min(which(z==1)[1], which(z.ae==1)[1])
+          n[1:d] = 1
+          y[d] = 1
       }
-      else {
-        d = which(z == 1)[1]
-        n[1:d] = 1
-        y[d] = 1
-      }
+      
     }
     for (i in 1:ncohort) {
       if (titration && n[d] < cohortsize && ft){
