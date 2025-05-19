@@ -16,6 +16,9 @@ get.oc(target, p.true, ncohort, cohortsize, n.earlystop=100,
 \item{p.true}{a vector containing the true toxicity probabilities of the
 investigational dose levels.}
 
+\item{ae.true}{a vector containing the true grade <=2 AE probabilities of the
+investigational dose levels.}
+
 \item{ncohort}{the total number of cohorts}
 
 \item{cohortsize}{the cohort size}
@@ -29,6 +32,8 @@ off this type of early stopping.}
 \item{startdose}{the starting dose level for the trial}
 
 \item{titration}{set \code{titration=TRUE} to perform dose escalation with cohort size = 1 to accelerate dose escalation at the begining of the trial.}
+
+\item{titration.dose}{the number of doses for titration}
 
 \item{p.saf}{the highest toxicity probability that is deemed subtherapeutic
 (i.e., below the MTD) such that dose escalation should be made.

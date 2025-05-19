@@ -23,6 +23,7 @@
 #'                    off this type of early stopping.
 #' @param startdose the starting dose level for the trial
 #' @param titration set \code{titration=TRUE} to perform dose escalation with cohort size = 1 to accelerate dose escalation at the begining of the trial.
+#' @param titration.dose the number of doses for titration
 #' @param p.saf the highest toxicity probability that is deemed subtherapeutic
 #'              (i.e., below the MTD) such that dose escalation should be made.
 #'              If p.saf is not specified and lambda1 is not specified, 
@@ -138,7 +139,7 @@
 #' plot(oc)  # plot flowchart of the BOIN design and design operating characteristics
 #' @export
 get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlystop = 100,
-                    startdose = 1, titration = FALSE, 
+                    startdose = 1, titration = FALSE, titration.dose = NULL,
                     p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL, 
                     cutoff.eli = 0.95, extrasafe = FALSE, offset = 0.05,boundMTD=FALSE,
                     ntrial = 1000, seed = 6, fix3p3 = FALSE, DE3o9 = FALSE)
@@ -249,11 +250,11 @@ get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlyst
     elimi = rep(0, ndose)
     ft=TRUE #flag used to determine whether or not to add cohortsize-1 patients to a dose for the first time when titration is triggered.
     if (titration) { # number of titration dose is all doses
-      z <- (runif(ndose) < p.true)
-      z.ae <- (runif(ndose) < ae.true) # simulate grade 2 AE events for each dose level
+      z <- (runif(titration.dose) < p.true[1:titration.dose])
+      z.ae <- (runif(titration.dose) < ae.true[1:titration.dose]) # simulate grade 2 AE events for each dose level
       if (sum(z) == 0 && sum(z.ae)==0) { # no events, proceed
-          d = ndose
-          n[1:ndose] = 1
+          d = titration.dose
+          n[1:titration.dose] = 1
       }else if(sum(z)==0){
         d=which(z.ae==1)[1]
       }else if(sum(z.ae)==0){
