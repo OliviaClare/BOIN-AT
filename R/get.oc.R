@@ -3,16 +3,16 @@
 #'
 #' Obtain the operating characteristics of the BOIN design for single agent trials by simulating trials.
 #'
-#' @usage get.oc(target, p.true, ncohort, cohortsize, n.earlystop=100,
+#' @usage get.oc(target, p.DLT, ncohort, cohortsize, n.earlystop=100,
 #'               startdose=1, titration=FALSE, 
 #'               p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL,
 #'               cutoff.eli=0.95,extrasafe=FALSE, offset=0.05, boundMTD=FALSE,
 #'               ntrial=1000, seed=6, fix3p3 = FALSE, DE3o9 = FALSE)
 #'
 #' @param target the target DLT rate
-#' @param p.true a vector containing the true toxicity probabilities of the
+#' @param p.DLT a vector containing the true toxicity probabilities of the
 #'              investigational dose levels.
-#' @param ae.true a vector containing the true grade <=2 AE probabilities of the
+#' @param p.AE a vector containing the true grade <=2 AE probabilities of the
 #'              investigational dose levels.
 #' @param ncohort the total number of cohorts
 #' @param cohortsize the cohort size
@@ -23,7 +23,7 @@
 #'                    off this type of early stopping.
 #' @param startdose the starting dose level for the trial
 #' @param titration set \code{titration=TRUE} to perform dose escalation with cohort size = 1 to accelerate dose escalation at the begining of the trial.
-#' @param titration.dose the number of doses for titration
+#' @param ntitration the number of doses for titration
 #' @param p.saf the highest toxicity probability that is deemed subtherapeutic
 #'              (i.e., below the MTD) such that dose escalation should be made.
 #'              If p.saf is not specified and lambda1 is not specified, 
@@ -94,7 +94,7 @@
 #'        (6) the percentage of early stopping without selecting the MTD (\code{$percentstop}),
 #'        (7) risk of overdosing 60\% or more of patients (\code{$overdose60}),
 #'        (8) risk of overdosing 80\% or more of patients (\code{$overdose80}),
-#'        (9) data.frame (\code{$simu.setup}) containing simulation parameters, such as target, p.true, etc.
+#'        (9) data.frame (\code{$simu.setup}) containing simulation parameters, such as target, p.DLT, etc.
 #'
 #' @note We should avoid setting the values of \code{p.saf} and \code{p.tox} very close to the
 #'      \code{target}. This is because the small sample sizes of typical phase I trials prevent us from
@@ -123,7 +123,7 @@
 #' @examples
 #'
 #' ## get the operating characteristics for BOIN single agent trial
-#' oc <- get.oc(target=0.3, p.true=c(0.05, 0.15, 0.3, 0.45, 0.6),
+#' oc <- get.oc(target=0.3, p.DLT=c(0.05, 0.15, 0.3, 0.45, 0.6),
 #' 			ncohort=20, cohortsize=3, ntrial=1000)
 #'
 #' summary(oc) # summarize design operating characteristics
@@ -132,14 +132,14 @@
 #'
 #'
 #' ## perform titration at the begining of the trial to accelerate dose escalation
-#' oc <- get.oc(target=0.3, p.true=c(0.05, 0.15, 0.3, 0.45, 0.6),
+#' oc <- get.oc(target=0.3, p.DLT=c(0.05, 0.15, 0.3, 0.45, 0.6),
 #' 			titration=TRUE, ncohort=20, cohortsize=3, ntrial=1000)
 #'
 #' summary(oc)          # summarize design operating characteristics
 #' plot(oc)  # plot flowchart of the BOIN design and design operating characteristics
 #' @export
-get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlystop = 100,
-                    startdose = 1, titration = FALSE, titration.dose = NULL,
+get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, n.earlystop = 100,
+                    startdose = 1, titration = FALSE, ntitration = NULL,
                     p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL, 
                     cutoff.eli = 0.95, extrasafe = FALSE, offset = 0.05,boundMTD=FALSE,
                     ntrial = 1000, seed = 6, fix3p3 = FALSE, DE3o9 = FALSE)
@@ -153,10 +153,13 @@ get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlyst
     
   }
   
-  if(is.null(ae.true)){
-    ae.true = rep(0, length(p.true))
+  if(is.null(p.AE)){
+    p.AE = p.DLT
   }
-  
+  if(sum(p.AE<p.DLT)>0){
+    stop("Probability of AE should be larger than probability of DLT.")
+  }
+  p.ae.nonDLT = (p.AE - p.DLT)/(1-p.DLT)  
   
   # Neither Lambda1 and phi1 specified
   if((is.null(p.saf)) & (is.null(lambda1))){
@@ -223,7 +226,7 @@ get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlyst
   lambda_e = lambda1
   lambda_d = lambda2
   
-  ndose = length(p.true)
+  ndose = length(p.DLT)
   npts = ncohort * cohortsize
   Y = matrix(rep(0, ndose * ntrial), ncol = ndose)
   N = matrix(rep(0, ndose * ntrial), ncol = ndose)
@@ -250,30 +253,34 @@ get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlyst
     elimi = rep(0, ndose)
     ft=TRUE #flag used to determine whether or not to add cohortsize-1 patients to a dose for the first time when titration is triggered.
     if (titration) { # number of titration dose is all doses
-      z <- (runif(titration.dose) < p.true[1:titration.dose])
-      z.ae <- (runif(titration.dose) < ae.true[1:titration.dose]) # simulate grade 2 AE events for each dose level
-      if (sum(z) == 0 && sum(z.ae)==0) { # no events, proceed
-          d = titration.dose
-          n[1:titration.dose] = 1
-      }else if(sum(z)==0){
-        d=which(z.ae==1)[1]
-      }else if(sum(z.ae)==0){
-        d=which(z==1)[1]
-      }else{
-          d = min(which(z==1)[1], which(z.ae==1)[1])
-          n[1:d] = 1
-          y[d] = 1
+      
+      for(d in 1:ntitration){
+        z <- (runif(1) < p.DLT[d])
+        if(z==1){ # DLT
+          n[d]=1
+          y[d]=1
+          break
+        }else{
+          z.ae <- (runif(1) < p.ae.nonDLT[d])
+          if(z.ae==1){ # non DLT AE
+            n[d]=1
+            y[d]=1
+            break
+          }else{
+            n[d]=1
+          }
+        }
       }
       
     }
     for (i in 1:ncohort) {
       if (titration && n[d] < cohortsize && ft){
         ft=FALSE
-        y[d] = y[d] + sum(runif(cohortsize - 1) < p.true[d])
+        y[d] = y[d] + sum(runif(cohortsize - 1) < p.DLT[d])
         n[d] = n[d] + cohortsize - 1
       }
       else {
-        newcohort = runif(cohortsize)<p.true[d];
+        newcohort = runif(cohortsize)<p.DLT[d];
         if((sum(n)+cohortsize) >= npts){
           nremain = npts - sum(n);
           y[d] = y[d] + sum(newcohort[1:nremain]);
@@ -344,21 +351,21 @@ get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlyst
   for (i in 1:ndose) {
     selpercent[i] = sum(dselect == i)/ntrial * 100
   }
-  # if (length(which(p.true == target)) > 0) {
-    # if (which(p.true == target) == ndose - 1) {
-    #   overdosing50 = mean(N[, p.true > target] > 0.5 *
+  # if (length(which(p.DLT == target)) > 0) {
+    # if (which(p.DLT == target) == ndose - 1) {
+    #   overdosing50 = mean(N[, p.DLT > target] > 0.5 *
     #                         npts) * 100
-    #   overdosing60 = mean(N[, p.true > target] > 0.6 *
+    #   overdosing60 = mean(N[, p.DLT > target] > 0.6 *
     #                         npts) * 100
-    #   overdosing80 = mean(N[, p.true > target] > 0.8 *
+    #   overdosing80 = mean(N[, p.DLT > target] > 0.8 *
     #                         npts) * 100
     # }
     # else {
-      overdosing50 = mean(rowSums(N[, p.true > target, drop=F]) >
+      overdosing50 = mean(rowSums(N[, p.DLT > target, drop=F]) >
                             0.5 * npts) * 100
-      overdosing60 = mean(rowSums(N[, p.true > target, drop=F]) >
+      overdosing60 = mean(rowSums(N[, p.DLT > target, drop=F]) >
                             0.6 * npts) * 100
-      overdosing80 = mean(rowSums(N[, p.true > target, drop=F]) >
+      overdosing80 = mean(rowSums(N[, p.DLT > target, drop=F]) >
                             0.8 * npts) * 100
     # }
     out = list(selpercent = selpercent, npatients = nptsdose,
@@ -366,7 +373,7 @@ get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlyst
                percentstop = sum(dselect == 99)/ntrial * 100, 
                overdose50 = overdosing50, overdose60 = overdosing60, overdose80 = overdosing80, 
                simu.setup = data.frame(target = target,
-                                       p.true = p.true, ncohort = ncohort, cohortsize = cohortsize,
+                                       p.DLT = p.DLT, ncohort = ncohort, cohortsize = cohortsize,
                                        startdose = startdose, p.saf = p.saf, p.tox = p.tox,
                                        cutoff.eli = cutoff.eli, extrasafe = extrasafe,
                                        offset = offset, ntrial = ntrial, dose = 1:ndose),
@@ -377,7 +384,7 @@ get.oc <- function (target, p.true, ae.true=NULL, ncohort, cohortsize, n.earlyst
   #   out = list(selpercent = selpercent, npatients = nptsdose,
   #              ntox = ntoxdose, totaltox = sum(Y)/ntrial, totaln = sum(N)/ntrial,
   #              percentstop = sum(dselect == 99)/ntrial * 100, simu.setup = data.frame(target = target,
-  #                                                                                     p.true = p.true, ncohort = ncohort, cohortsize = cohortsize,
+  #                                                                                     p.DLT = p.DLT, ncohort = ncohort, cohortsize = cohortsize,
   #                                                                                     startdose = startdose, p.saf = p.saf, p.tox = p.tox,
   #                                                                                     cutoff.eli = cutoff.eli, extrasafe = extrasafe,
   #                                                                                     offset = offset, ntrial = ntrial, dose = 1:ndose),

@@ -4,7 +4,7 @@
 \alias{get.oc}
 \title{Generate operating characteristics for single agent trials}
 \usage{
-get.oc(target, p.true, ncohort, cohortsize, n.earlystop=100,
+get.oc(target, p.DLT, ncohort, cohortsize, n.earlystop=100,
               startdose=1, titration=FALSE, 
               p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL,
               cutoff.eli=0.95,extrasafe=FALSE, offset=0.05, boundMTD=FALSE,
@@ -13,10 +13,10 @@ get.oc(target, p.true, ncohort, cohortsize, n.earlystop=100,
 \arguments{
 \item{target}{the target DLT rate}
 
-\item{p.true}{a vector containing the true toxicity probabilities of the
+\item{p.DLT}{a vector containing the true toxicity probabilities of the
 investigational dose levels.}
 
-\item{ae.true}{a vector containing the true grade <=2 AE probabilities of the
+\item{p.AE}{a vector containing the true grade <=2 AE probabilities of the
 investigational dose levels.}
 
 \item{ncohort}{the total number of cohorts}
@@ -33,7 +33,7 @@ off this type of early stopping.}
 
 \item{titration}{set \code{titration=TRUE} to perform dose escalation with cohort size = 1 to accelerate dose escalation at the begining of the trial.}
 
-\item{titration.dose}{the number of doses for titration}
+\item{ntitration}{the number of doses for titration}
 
 \item{p.saf}{the highest toxicity probability that is deemed subtherapeutic
 (i.e., below the MTD) such that dose escalation should be made.
@@ -87,7 +87,7 @@ Modify the decision from stay to de-escalation when observing 2 DLTs out of 6 pa
        (6) the percentage of early stopping without selecting the MTD (\code{$percentstop}),
        (7) risk of overdosing 60\% or more of patients (\code{$overdose60}),
        (8) risk of overdosing 80\% or more of patients (\code{$overdose80}),
-       (9) data.frame (\code{$simu.setup}) containing simulation parameters, such as target, p.true, etc.
+       (9) data.frame (\code{$simu.setup}) containing simulation parameters, such as target, p.DLT, etc.
 }
 \description{
 Obtain the operating characteristics of the BOIN design for single agent trials by simulating trials.
@@ -128,7 +128,7 @@ We should avoid setting the values of \code{p.saf} and \code{p.tox} very close t
 \examples{
 
 ## get the operating characteristics for BOIN single agent trial
-oc <- get.oc(target=0.3, p.true=c(0.05, 0.15, 0.3, 0.45, 0.6),
+oc <- get.oc(target=0.3, p.DLT=c(0.05, 0.15, 0.3, 0.45, 0.6),
 			ncohort=20, cohortsize=3, ntrial=1000)
 
 summary(oc) # summarize design operating characteristics
@@ -137,7 +137,7 @@ plot(oc)   # plot flowchart of the BOIN design and design operating characterist
 
 
 ## perform titration at the begining of the trial to accelerate dose escalation
-oc <- get.oc(target=0.3, p.true=c(0.05, 0.15, 0.3, 0.45, 0.6),
+oc <- get.oc(target=0.3, p.DLT=c(0.05, 0.15, 0.3, 0.45, 0.6),
 			titration=TRUE, ncohort=20, cohortsize=3, ntrial=1000)
 
 summary(oc)          # summarize design operating characteristics
