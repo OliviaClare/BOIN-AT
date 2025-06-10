@@ -261,13 +261,11 @@ get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, n.earlystop =
           y[d]=1
           break
         }else{
+          n[d]=1
+          y[d]=0
           z.ae <- (runif(1) < p.ae.nonDLT[d])
           if(z.ae==1){ # non DLT AE
-            n[d]=1
-            y[d]=1
             break
-          }else{
-            n[d]=1
           }
         }
       }
