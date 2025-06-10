@@ -38,7 +38,7 @@
 #'               the https://trialdesign.org/one-page-shell.html#BOIN to mimic 3+3, including 
 #'               Modify the decision from de-escalation to stay when observing 1 DLT out of 3 patients when \eqn{\phi\in [0.25, 0.279]}.
 #'               Modify the decision from stay to de-escalation when observing 2 DLTs out of 6 patients when \eqn{\phi\in [0.28, 0.33]}.
-#' @param DE3o9 if fix3p3 is TRUE and phi is in [0.28, 0.33], i.e., de-escalation when observing 2 DLTs out of 6 patients, turning this option (default FALSE) to TRUE allowing de-escalation when observing 3 DLTs out of 9
+#' @param DE3o9 turning this option (default FALSE) to TRUE allows de-escalation when observing 3 DLTs out of 9
 #' 
 #' @details The dose escalation and deescalation boundaries are all we need to run a
 #'          phase I trial when using the BOIN design. The decision of which dose to
