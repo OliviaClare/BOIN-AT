@@ -16,6 +16,8 @@
 #'              investigational dose levels.
 #' @param ncohort the total number of cohorts
 #' @param cohortsize the cohort size
+#' @param npts the total number of patients to be enrolled. If specified, this
+#'                    will override the ncohort argument.
 #' @param n.earlystop the early stopping parameter. If the number of patients
 #'                    treated at the current dose reaches \code{n.earlystop},
 #'                    stop the trial and select the MTD based on the observed data.
@@ -24,6 +26,7 @@
 #' @param startdose the starting dose level for the trial
 #' @param titration set \code{titration=TRUE} to perform dose escalation with cohort size = 1 to accelerate dose escalation at the begining of the trial.
 #' @param ntitration the number of doses for titration
+#' @param limit.lowest the flag for whether to change lowest dose from dose level 1 to one dose below transition dose level.
 #' @param p.saf the highest toxicity probability that is deemed subtherapeutic
 #'              (i.e., below the MTD) such that dose escalation should be made.
 #'              If p.saf is not specified and lambda1 is not specified, 
@@ -138,8 +141,8 @@
 #' summary(oc)          # summarize design operating characteristics
 #' plot(oc)  # plot flowchart of the BOIN design and design operating characteristics
 #' @export
-get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, n.earlystop = 100,
-                    startdose = 1, titration = FALSE, ntitration = NULL,
+get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, npts=NULL, n.earlystop = 100,
+                    startdose = 1, titration = FALSE, ntitration = NULL, limit.lowest = FALSE,
                     p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL, 
                     cutoff.eli = 0.95, extrasafe = FALSE, offset = 0.05,boundMTD=FALSE,
                     ntrial = 1000, seed = 6, fix3p3 = FALSE, DE3o9 = FALSE)
@@ -227,7 +230,10 @@ get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, n.earlystop =
   lambda_d = lambda2
   
   ndose = length(p.DLT)
-  npts = ncohort * cohortsize
+  if(is.null(npts)){
+    npts = ncohort * cohortsize
+  }
+  
   Y = matrix(rep(0, ndose * ntrial), ncol = ndose)
   N = matrix(rep(0, ndose * ntrial), ncol = ndose)
   dselect = rep(0, ntrial)
@@ -251,6 +257,7 @@ get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, n.earlystop =
     earlystop = 0
     d = startdose
     elimi = rep(0, ndose)
+    lowest.dose = 1 # initiate lowest dose at 1.
     ft=TRUE #flag used to determine whether or not to add cohortsize-1 patients to a dose for the first time when titration is triggered.
     if (titration) { # number of titration dose is all doses
       
@@ -267,9 +274,11 @@ get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, n.earlystop =
           if(z.ae==1){ # non DLT AE
             break
           }
+          
         }
       }
-      
+      if(limit.lowest){ lowest.dose = max((d-1), 1)} # update lowest dose
+      ncohort = ceiling((npts-sum(n))/cohortsize) # number of cohorts is recalculated based on sample size left
     }
     for (i in 1:ncohort) {
       if (titration && n[d] < cohortsize && ft){
@@ -295,7 +304,7 @@ get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, n.earlystop =
       if (!is.na(b.elim[n[d]])) {
         if (y[d] >= b.elim[n[d]]) {
           elimi[d:ndose] = 1
-          if (d == 1) {
+          if (d == lowest.dose) {
             earlystop = 1
             break
           }
@@ -315,7 +324,7 @@ get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, n.earlystop =
       if(n[d]>=n.earlystop &&
          (
            (y[d]>b.e[n[d]] && y[d]<b.d[n[d]])||
-           (d==1 && y[d]>=b.d[n[d]]) ||
+           (d==lowest.dose && y[d]>=b.d[n[d]]) ||
            ((d==ndose||elimi[d+1]==1) && y[d]<=b.e[n[d]])
          )
       ) break;
@@ -324,7 +333,7 @@ get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, n.earlystop =
         if (elimi[d + 1] == 0)
           d = d + 1
       }
-      else if (y[d] >= b.d[n[d]] && d != 1) {
+      else if (y[d] >= b.d[n[d]] && d > lowest.dose) {
         d = d - 1
       }
       else {
