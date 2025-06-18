@@ -23,6 +23,9 @@ investigational dose levels.}
 
 \item{cohortsize}{the cohort size}
 
+\item{npts}{the total number of patients to be enrolled. If specified, this
+will override the ncohort argument.}
+
 \item{n.earlystop}{the early stopping parameter. If the number of patients
 treated at the current dose reaches \code{n.earlystop},
 stop the trial and select the MTD based on the observed data.
@@ -34,6 +37,8 @@ off this type of early stopping.}
 \item{titration}{set \code{titration=TRUE} to perform dose escalation with cohort size = 1 to accelerate dose escalation at the begining of the trial.}
 
 \item{ntitration}{the number of doses for titration}
+
+\item{limit.lowest}{the flag for whether to change lowest dose from dose level 1 to one dose below transition dose level.}
 
 \item{p.saf}{the highest toxicity probability that is deemed subtherapeutic
 (i.e., below the MTD) such that dose escalation should be made.

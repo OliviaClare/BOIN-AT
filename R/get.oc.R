@@ -258,9 +258,9 @@ get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, npts=NULL, n.
     d = startdose
     elimi = rep(0, ndose)
     lowest.dose = 1 # initiate lowest dose at 1.
-    ft=TRUE #flag used to determine whether or not to add cohortsize-1 patients to a dose for the first time when titration is triggered.
+    ft=TRUE #flag used to determine whether or not to add patients to a dose for the first time when titration is triggered.
     if (titration) { # number of titration dose is all doses
-      
+      flag.titration = FALSE # Flag for finishing titration with no AE or DLT (no transition)
       for(d in 1:ntitration){
         z <- (runif(1) < p.DLT[d])
         if(z==1){ # DLT
@@ -274,17 +274,22 @@ get.oc <- function (target, p.DLT, p.AE=NULL, ncohort, cohortsize, npts=NULL, n.
           if(z.ae==1){ # non DLT AE
             break
           }
+          if(d==ntitration && z.ae==0){
+            d = d+1 # if last titration dose has no AE or DLT, d+1 is used as start dose of BOIN
+            flag.titration = TRUE
+          }
           
         }
       }
-      if(limit.lowest){ lowest.dose = max((d-1), 1)} # update lowest dose
+      if(limit.lowest){ lowest.dose = max((d-1), 1)} # after titration, update lowest dose to one dose below transition dose
       ncohort = ceiling((npts-sum(n))/cohortsize) # number of cohorts is recalculated based on sample size left
     }
     for (i in 1:ncohort) {
       if (titration && n[d] < cohortsize && ft){
         ft=FALSE
-        y[d] = y[d] + sum(runif(cohortsize - 1) < p.DLT[d])
-        n[d] = n[d] + cohortsize - 1
+        cohortsize.tmp = ifelse(flag.titration, cohortsize, cohortsize-1) 
+        y[d] = y[d] + sum(runif(cohortsize.tmp) < p.DLT[d])
+        n[d] = n[d] + cohortsize.tmp
       }
       else {
         newcohort = runif(cohortsize)<p.DLT[d];
