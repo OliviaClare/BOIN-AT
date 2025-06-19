@@ -143,7 +143,8 @@ plot(oc)   # plot flowchart of the BOIN design and design operating characterist
 
 ## perform titration at the begining of the trial to accelerate dose escalation
 oc <- get.oc(target=0.3, p.DLT=c(0.05, 0.15, 0.3, 0.45, 0.6),
-			titration=TRUE, ncohort=20, cohortsize=3, ntrial=1000)
+        p.AE = c(0.6, 0.6, 0.7, 0.7, 0.8),limit.lowest = TRUE,
+        titration=TRUE, ntitration = 3, npts = 34, cohortsize=3, ntrial=1000)
 
 summary(oc)          # summarize design operating characteristics
 plot(oc)  # plot flowchart of the BOIN design and design operating characteristics
