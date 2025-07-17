@@ -4,11 +4,11 @@
 \alias{get.oc.DS3610}
 \title{Generate operating characteristics for single agent trials}
 \usage{
-get.oc.DS3610(target, p.DLT, ncohort, cohortsize, n.earlystop=100,
-              startdose=1, titration=FALSE, 
-              p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL,
-              cutoff.eli=0.95,extrasafe=FALSE, offset=0.05, boundMTD=FALSE,
-              ntrial=1000, seed=6, fix3p3 = FALSE, DE3o9 = FALSE)
+get.oc.DS3610(target, p.DLT, p.AE=NULL, ncohort=NULL, cohortsize, npts.BOIN=NULL, n.earlystop = 100,
+                       startdose = 1, titration = FALSE, ntitration = NULL, limit.lowest = FALSE,
+                       p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL, 
+                       cutoff.eli = 0.95, extrasafe = FALSE, offset = 0.05,boundMTD=FALSE,
+                       ntrial = 1000, seed = 6, fix3p3 = FALSE, DE3o9 = FALSE)
 }
 \arguments{
 \item{target}{the target DLT rate}
@@ -23,8 +23,7 @@ investigational dose levels.}
 
 \item{cohortsize}{the cohort size}
 
-\item{npts}{the total number of patients to be enrolled. If specified, this
-will override the ncohort argument.}
+\item{npts.BOIN}{the total number of patients in BOIN design to be enrolled (in addition to titration patients if any).}
 
 \item{n.earlystop}{the early stopping parameter. If the number of patients
 treated at the current dose reaches \code{n.earlystop},
@@ -144,7 +143,7 @@ plot(oc)   # plot flowchart of the BOIN design and design operating characterist
 ## perform titration at the begining of the trial to accelerate dose escalation
 oc <- get.oc.DS3610(target=0.3, p.DLT=c(0.05, 0.15, 0.3, 0.45, 0.6),
         p.AE = c(0.6, 0.6, 0.7, 0.7, 0.8),limit.lowest = TRUE,
-        titration=TRUE, ntitration = 3, npts = 34, cohortsize=3, ntrial=1000)
+        titration=TRUE, ntitration = 3, npts.BOIN = 34, cohortsize=3, ntrial=1000)
 
 summary(oc)          # summarize design operating characteristics
 plot(oc)  # plot flowchart of the BOIN design and design operating characteristics

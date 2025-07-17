@@ -3,11 +3,11 @@
 #'
 #' Obtain the operating characteristics of the BOIN design for single agent trials by simulating trials.
 #'
-#' @usage get.oc.DS3610(target, p.DLT, ncohort, cohortsize, n.earlystop=100,
-#'               startdose=1, titration=FALSE, 
-#'               p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL,
-#'               cutoff.eli=0.95,extrasafe=FALSE, offset=0.05, boundMTD=FALSE,
-#'               ntrial=1000, seed=6, fix3p3 = FALSE, DE3o9 = FALSE)
+#' @usage get.oc.DS3610(target, p.DLT, p.AE=NULL, ncohort=NULL, cohortsize, npts.BOIN=NULL, n.earlystop = 100,
+#'                        startdose = 1, titration = FALSE, ntitration = NULL, limit.lowest = FALSE,
+#'                        p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL, 
+#'                        cutoff.eli = 0.95, extrasafe = FALSE, offset = 0.05,boundMTD=FALSE,
+#'                        ntrial = 1000, seed = 6, fix3p3 = FALSE, DE3o9 = FALSE)
 #'
 #' @param target the target DLT rate
 #' @param p.DLT a vector containing the true toxicity probabilities of the
@@ -16,8 +16,7 @@
 #'              investigational dose levels.
 #' @param ncohort the total number of cohorts
 #' @param cohortsize the cohort size
-#' @param npts the total number of patients to be enrolled. If specified, this
-#'                    will override the ncohort argument.
+#' @param npts.BOIN the total number of patients in BOIN design to be enrolled (in addition to titration patients if any). 
 #' @param n.earlystop the early stopping parameter. If the number of patients
 #'                    treated at the current dose reaches \code{n.earlystop},
 #'                    stop the trial and select the MTD based on the observed data.
@@ -137,12 +136,12 @@
 #' ## perform titration at the begining of the trial to accelerate dose escalation
 #' oc <- get.oc.DS3610(target=0.3, p.DLT=c(0.05, 0.15, 0.3, 0.45, 0.6),
 #'         p.AE = c(0.6, 0.6, 0.7, 0.7, 0.8),limit.lowest = TRUE,
-#'         titration=TRUE, ntitration = 3, npts = 34, cohortsize=3, ntrial=1000)
+#'         titration=TRUE, ntitration = 3, npts.BOIN = 34, cohortsize=3, ntrial=1000)
 #'
 #' summary(oc)          # summarize design operating characteristics
 #' plot(oc)  # plot flowchart of the BOIN design and design operating characteristics
 #' @export
-get.oc.DS3610 <- function (target, p.DLT, p.AE=NULL, ncohort=NULL, cohortsize, npts=NULL, n.earlystop = 100,
+get.oc.DS3610 <- function (target, p.DLT, p.AE=NULL, ncohort=NULL, cohortsize, npts.BOIN=NULL, n.earlystop = 100,
                     startdose = 1, titration = FALSE, ntitration = NULL, limit.lowest = FALSE,
                     p.saf = NULL, p.tox = NULL, lambda1 = NULL, lambda2 = NULL, 
                     cutoff.eli = 0.95, extrasafe = FALSE, offset = 0.05,boundMTD=FALSE,
@@ -157,8 +156,8 @@ get.oc.DS3610 <- function (target, p.DLT, p.AE=NULL, ncohort=NULL, cohortsize, n
     
   }
   
-  if(is.null(npts) && is.null(ncohort)){
-    stop("Either npts or ncohort must be specified.")
+  if(is.null(npts.BOIN) && is.null(ncohort)){
+    stop("Either npts.BOIN or ncohort must be specified.")
   }
   
   if(is.null(p.AE)){
@@ -235,11 +234,12 @@ get.oc.DS3610 <- function (target, p.DLT, p.AE=NULL, ncohort=NULL, cohortsize, n
   lambda_d = lambda2
   
   ndose = length(p.DLT)
-  if(is.null(npts)){
-    npts = ncohort * cohortsize
+  if(is.null(npts.BOIN)){
+    npts = npts.BOIN = ncohort * cohortsize
   }
   if(is.null(ncohort)){
-    ncohort = ceiling(npts/cohortsize)
+    ncohort = ceiling(npts.BOIN/cohortsize)
+    npts = npts.BOIN
   }
   
   Y = matrix(rep(0, ndose * ntrial), ncol = ndose)
@@ -290,13 +290,13 @@ get.oc.DS3610 <- function (target, p.DLT, p.AE=NULL, ncohort=NULL, cohortsize, n
         }
       }
       if(limit.lowest){ lowest.dose = max((d-1), 1)} # after titration, update lowest dose to one dose below transition dose
-      
+      npts.titration = sum(n) # number of patients in titration doses
+      npts = npts.titration + npts.BOIN - ifelse(flag.titration, 0, 1)
     }
     for (i in 1:ncohort) {
       if (titration && n[d] < cohortsize && ft){
         ft=FALSE
         cohortsize.tmp = ifelse(flag.titration, cohortsize, cohortsize-1) 
-        npts = npts + sum(n)-ifelse(flag.titration, 0, 1) # update total number of patients
         y[d] = y[d] + sum(runif(cohortsize.tmp) < p.DLT[d])
         n[d] = n[d] + cohortsize.tmp
       }
